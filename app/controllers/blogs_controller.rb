@@ -45,7 +45,7 @@ class BlogsController < ApplicationController
   private
 
   def set_blog
-    @blog = if Blog.find(params[:id]).user == current_user
+    @blog = if Blog.find(params[:id]).owned_by?(current_user)
               Blog.find(params[:id])
             else
               Blog.published.find(params[:id])
