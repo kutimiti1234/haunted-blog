@@ -4,6 +4,7 @@ class BlogsController < ApplicationController
   skip_before_action :authenticate_user!, only: %i[index show]
 
   before_action :set_blog, only: %i[show edit update destroy]
+  before_action :check_blog_owned, only: %i[edit update destroy]
 
   def index
     @blogs = Blog.search(params[:term]).published.default_order
@@ -44,10 +45,20 @@ class BlogsController < ApplicationController
   private
 
   def set_blog
-    @blog = Blog.find(params[:id])
+    @blog = if Blog.find(params[:id]).owned_by?(current_user)
+              Blog.find(params[:id])
+            else
+              Blog.published.find(params[:id])
+            end
+  end
+
+  def check_blog_owned
+    raise ActiveRecord::RecordNotFound if !@blog.owned_by?(current_user)
   end
 
   def blog_params
-    params.require(:blog).permit(:title, :content, :secret, :random_eyecatch)
+    params.require(:blog).permit(:title, :content, :secret, :random_eyecatch).tap do |params|
+      params[:random_eyecatch] = false if params[:random_eyecatch] && !current_user.premium?
+    end
   end
 end
